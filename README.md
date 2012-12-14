@@ -18,16 +18,16 @@ Copy ExtractText.pm to e.g. /etc/spamassassin/
 Edit /etc/spamassassin/local.cf and specify something like :
 
 
-loadplugin Mail::SpamAssassin::Plugin::ExtractText /etc/spamassassin/ExtractText.pm
+    loadplugin Mail::SpamAssassin::Plugin::ExtractText /etc/spamassassin/ExtractText.pm
 
-extracttext_mime_magic    yes
-extracttext_external      antiword     {CS:UTF-8} /usr/bin/antiword -t -w 0 -m UTF-8.txt ${file}
-extracttext_use             antiword     .doc application/(?:vnd\\.?)?ms-?word.*
+    extracttext_mime_magic    yes
+    extracttext_external      antiword     {CS:UTF-8} /usr/bin/antiword -t -w 0 -m UTF-8.txt ${file}
+    extracttext_use           antiword     .doc application/(?:vnd\\.?)?ms-?word.*
 
 
 Then test using something like :
 
-cat something-containing-a-doc-attachment.eml | spamassassin --debug > output.txt 2>&1
+    $ cat something-containing-a-doc-attachment.eml | spamassassin --debug > output.txt 2>&1
 
 Then examine the contents of 'output.txt'.
 
@@ -36,7 +36,7 @@ Requirements
 
 On e.g. Debian Squeeze, you'll want to install the following :
 
-apt-get install libio-string-perl libipc-run3-perl libfile-mimeinfo-perl antiword
+    $ apt-get install libio-string-perl libipc-run3-perl libfile-mimeinfo-perl antiword
 
 Other Bits
 ========
