@@ -815,6 +815,14 @@ sub _tmpfile {
 	}
 	return $$tmp;
 }
+
+
+sub trick_taint {
+    my $match = $_[0] =~ /^(.*)$/s;
+    return $1;
+}
+
+
 sub _extract_external {
 	my ($self,$object,$tool) = @_;
 	my $ok = 0;
@@ -822,29 +830,28 @@ sub _extract_external {
 	my @cmd = @{$tool->{spec}};
 	my $tmp;
 	my $err = 0;
-	for (my $i=1;$i<@cmd;$i++) {
-		$cmd[$i] =~ s/\$\{f(?:ile)?\}/_tmpfile($object,\$tmp,\$err)/gei;
-		if ($err) {
-			$self->isch('Temp file error!');
-			return 0;
-		}
+         my @clean_cmd;
+
+	for (my $i=0;$i<@cmd;$i++) {
+	     $cmd[$i] =~ s/\$\{f(?:ile)?\}/_tmpfile($object,\$tmp,\$err)/gei;
+              $self->dbg('%s', $cmd[$i]);
+              $clean_cmd[$i] = trick_taint($cmd[$i]);
+	     if ($err) {
+		$self->isch('Temp file error!');
+		return 0;
+	    }
 	}
-	my $sin;
+
+        my $sin;
 	if ($tmp) {
 		my $es = '';
 		$sin = \$es;
 	} else {
-		if ($object->{file} && !defined($object->{data})) {
-			my $fh;
-			return 0 unless (open($fh,'<',$object->{file}));
-			my $fd = join('',<$fh>);
-			close($fh);
-			$object->{data} = \$fd;
-		}
-		$sin = $object->{data};
+            die('configuration issue (prehaps {$file} is missing?)');
 	}
+
 	$self->dbg('External call: %s "%s"',$tool->{name},join('","',@cmd));
-	eval { $ok = run3(\@cmd,$sin,\$extracted,\$error); };
+	eval { $ok = run3(\@clean_cmd, undef,\$extracted,\$error); }; warn $@ if $@;
 	my $ret = $?;
 	if ($ret || !$ok || $error) {
 		$error = '?' unless ($error);
@@ -1145,3 +1152,4 @@ sub parsed_metadata {
 }
 
 1;
+
