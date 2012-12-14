@@ -1,0 +1,4 @@
+ExtractText
+===========
+
+ExtractText - SpamAssassin plugin
