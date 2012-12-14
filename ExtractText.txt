@@ -1,0 +1,31 @@
+** File list
+
+* ExtractText.pm
+
+The main plugin.
+Contains the documentation as POD.
+
+* ExtractText.cf
+
+A configuration example.
+
+* ExtractText/OpenXML.pm
+
+A *very* basic plugin of Microsofts OpenXML format.
+
+* ExtractText/Dummy.pm
+
+A plugin that does nothing, except possibly examplifying the basic structure
+of an extractor plugin.
+
+* ExtractText.tags
+
+An unrtf output speficiation for unrtf that works with the configuration in
+the supplied ExtractText.cf.
+
+Place it in the unrtf tag file search path (default is
+/usr/local/share/unrtf/outputs).
+
+** To Do & Ideas
+
+* Make eval tests using basic info stored in the nodes.
