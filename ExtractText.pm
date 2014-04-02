@@ -574,6 +574,9 @@ sub parse_config {
 			}
 			unless (defined($self->{modul}->{$package})) {
 				unless ($path) {
+					# Apr  2 09:31:09.099 [27874] warn: plugin: eval failed: Insecure dependency in eval while running with -T 
+					# switch at /etc/spamassassin/ExtractText.pm line 577.
+					$package = trick_taint($package);
 					$self->{modul}->{$package} = eval("require $package;");
 					unless ($self->{modul}->{$package} || substr($package,0,length(__PACKAGE__)+2) ne __PACKAGE__.'::') {
 						$path = __FILE__;
@@ -830,12 +833,12 @@ sub _extract_external {
 	my @cmd = @{$tool->{spec}};
 	my $tmp;
 	my $err = 0;
-         my @clean_cmd;
+	my @clean_cmd;
 
 	for (my $i=0;$i<@cmd;$i++) {
 	     $cmd[$i] =~ s/\$\{f(?:ile)?\}/_tmpfile($object,\$tmp,\$err)/gei;
-              $self->dbg('%s', $cmd[$i]);
-              $clean_cmd[$i] = trick_taint($cmd[$i]);
+		$self->dbg('%s', $cmd[$i]);
+		$clean_cmd[$i] = trick_taint($cmd[$i]);
 	     if ($err) {
 		$self->isch('Temp file error!');
 		return 0;
@@ -847,7 +850,7 @@ sub _extract_external {
 		my $es = '';
 		$sin = \$es;
 	} else {
-        die("configuration issue (perhaps ${file} is missing?)");
+		die("configuration issue (perhaps tmp file is missing?)");
 	}
 
 	$self->dbg('External call: %s "%s"',$tool->{name},join('","',@cmd));
