@@ -847,7 +847,7 @@ sub _extract_external {
 		my $es = '';
 		$sin = \$es;
 	} else {
-            die('configuration issue (prehaps ${file} is missing?)');
+        die("configuration issue (perhaps ${file} is missing?)");
 	}
 
 	$self->dbg('External call: %s "%s"',$tool->{name},join('","',@cmd));
