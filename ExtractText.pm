@@ -481,13 +481,25 @@ sub new {
 	$self->register_method_priority('post_message_parse',-1);
 	return $self;
 }
+# Ugly kludge to get around perl Taint issues. (perl -T)
+sub trick_taint {
+	my $match = $_[0] =~ /^(.*)$/s;
+	return $1;
+}
 
 sub _logmsg {
 	my $self = shift;
 	my $lev = shift;
 	my $msg = shift;
 	for (my $i=0;$i<@_;$i++) { $_[$i] = '' unless (defined($_[$i])); }
-	$msg = $self->{curmid} ? sprintf("extracttext: %s $msg",$self->{curmid},@_) : sprintf("extracttext: $msg",@_);
+	$msg = trick_taint($msg);
+	if($self->{curmid}) {
+		$msg = sprintf("extracttext: %s $msg",$self->{curmid},@_);
+	}
+	else {
+		$msg = sprintf("extracttext: $msg",@_);
+	}
+#	$msg = $self->{curmid} ? sprintf("extracttext: %s $msg",$self->{curmid},@_) : sprintf("extracttext: $msg",@_);
 	print STDERR "[$lev] $msg\n" if ($self->{stderr});
 	return $msg;
 }
@@ -820,12 +832,9 @@ sub _tmpfile {
 }
 
 
-sub trick_taint {
-    my $match = $_[0] =~ /^(.*)$/s;
-    return $1;
-}
 
 
+# Extract 'text' via running an external command.
 sub _extract_external {
 	my ($self,$object,$tool) = @_;
 	my $ok = 0;
@@ -835,27 +844,34 @@ sub _extract_external {
 	my $err = 0;
 	my @clean_cmd;
 
+	my $stdin;
+
 	for (my $i=0;$i<@cmd;$i++) {
-	     $cmd[$i] =~ s/\$\{f(?:ile)?\}/_tmpfile($object,\$tmp,\$err)/gei;
+		# {CS:UTF-8} /usr/bin/antiword -t -w 0 -m UTF-8.txt -
+		$cmd[$i] =~ s/\$\{f(?:ile)?\}/_tmpfile($object,\$tmp,\$err)/gei;
 		$self->dbg('%s', $cmd[$i]);
+		# it should be safe to trick_taint the command line - given it's coming from admin-provided config.
 		$clean_cmd[$i] = trick_taint($cmd[$i]);
-	     if ($err) {
-		$self->isch('Temp file error!');
-		return 0;
-	    }
+		if ($err) {
+			$self->isch('Temp file error!');
+			return 0;
+		}
+	}
+	if($object->{file} && !defined($object->{data})) {
+		my $fh;
+		return 0 unless (open($fh, '<', $object->{file}));
+		my $fd = join('', <$fh>);
+		close($fh);
+		$object->{data} = \$fd;
 	}
 
-        my $sin;
-	if ($tmp) {
-		my $es = '';
-		$sin = \$es;
-	} else {
-		die("configuration issue (perhaps tmp file is missing?)");
-	}
+	$stdin = $object->{data};
 
 	$self->dbg('External call: %s "%s"',$tool->{name},join('","',@cmd));
-	eval { $ok = run3(\@clean_cmd, undef,\$extracted,\$error); }; warn $@ if $@;
+	# run3( \@cmd, undef, $stdout, $stderr ) - read from STDIN from parent.
+	eval { $ok = run3(\@clean_cmd, $stdin,\$extracted,\$error); }; warn $@ if $@;
 	my $ret = $?;
+	$self->info("$tool->{name} - return value : $ret");
 	if ($ret || !$ok || $error) {
 		$error = '?' unless ($error);
 		$error =~ s/^[\s\r\n]+//s;
@@ -1155,4 +1171,3 @@ sub parsed_metadata {
 }
 
 1;
-
